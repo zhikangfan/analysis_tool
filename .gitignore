@@ -68,9 +68,9 @@ typings/
 /web/src/.umi-production
 /web/src/.umi-test
 /web/dist
-/web/public/data/
-/web/public/download/
-/web/public/unzip/
-/web/public/demo.zip
-!/web/public/**/.gitkeep
+/public/data/
+/public/download/
+/public/unzip/
+/public/demo.zip
+!/public/**/.gitkeep
 .swc
