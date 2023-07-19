@@ -9,7 +9,7 @@ const request = require('request');
 const uploadMiddleware = require('../middleware/uploadMiddleware');
 const md5 = require('md5');
 
-
+const linkField = 'frame_sample_url';
 /**
  * @description 将两个数组转换成对象
  * @param keys
@@ -49,7 +49,7 @@ async function isExists(path) {
  * @returns {*[]}
  */
 async function unzip(file) {
-  let unzipPath = path.resolve(__dirname, '../public/unzip/' + file)
+  let unzipPath = path.resolve(__dirname, '../public/unzip/' + path.parse(file).name)
   let downloadPath = path.resolve(__dirname, `../public/download/${file}`)
   let flag = await isExists(unzipPath)
   if (!flag) {
@@ -148,16 +148,16 @@ router.get('/data', async (req,res) => {
         // 将zip下载到本地并解压
         for (let i = 0; i < finalData.length; i++) {
           let item = finalData[i];
-          if (item["截帧url"]) {
+          if (item[linkField]) {
             try {
-              let dirname = md5(path.parse(item["截帧url"]).name);
+              let dirname = md5(path.parse(item[linkField]).name);
               let unzipPath = path.resolve(__dirname, '../public/unzip/' + dirname);
               let flag = await isExists(unzipPath)
               let unzipFilePath = unzipPath
               if (!flag) {
-                let results = await downloadZip(item["截帧url"])
+                let resultsFile = await downloadZip(item[linkField])
                 // 解压文件
-                unzipFilePath = await unzip(results);
+                unzipFilePath = await unzip(resultsFile);
               }
 
               // 读取文件目录
@@ -169,7 +169,7 @@ router.get('/data', async (req,res) => {
                   let photos = files.filter(f => ['.png','.jpeg','.jpg', '.webp', '.svg', '.gif'].includes(path.extname(f)));
 
                   item['files'] = photos.map(item => {
-                    return `/public/unzip/${results}/${item}`
+                    return `/unzip/${dirname}/${item}`
                   })
                 }
               })

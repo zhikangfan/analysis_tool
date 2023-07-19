@@ -7,15 +7,17 @@ const { Dragger } = Upload;
 import axios from 'axios'
 
 export interface TableData {
-  "神策id": string,
-  "会员状态": string,
-  "录制模式": "区域模式" | "游戏模式" | "全屏录制" | "应用窗口录制" | "摄像头录制" | "跟随鼠标录制" | " 声音录制",
-  "录制时长(秒）": number,
-  "文件大小（Byte字节）": number,
-  "分辨率": string,
-  "帧率": number,
-  "截帧url": string,
-  files: Array<string>
+  distinct_id: string, // 神策id
+  uid: string, // 用户id
+  user_status : string, // 用户状态
+  record_process: string, // 录制进程
+  record_mode: "区域模式" | "游戏模式" | "全屏录制" | "应用窗口录制" | "摄像头录制" | "跟随鼠标录制" | " 声音录制",
+  record_duration : number, // 录制时长
+  file_size : number, // 文件大小
+  resolution: string, // 分辨率
+  frame_rate : number, // 帧率
+  frame_sample_url : string, // 截帧采样图片链接
+  files: Array<string> // 截帧采样图片
 }
 
 
@@ -64,57 +66,61 @@ export default function HomePage() {
 
   const columns = [{
     title: "神策ID",
-    key: "神策id",
-    dataIndex: "神策id"
+    key: "distinct_id",
+    dataIndex: "distinct_id"
   },
     {
       title: "用户ID",
-      key: "用户id",
-      dataIndex: "用户id"
+      key: "uid",
+      dataIndex: "uid"
     },
     {
       title: "帧率",
-      // key: "帧率",
-      dataIndex: "帧率"
+      key: "frame_rate",
+      dataIndex: "frame_rate"
     },
     {
-      title: "会员状态",
-      // key: "会员状态",
-      dataIndex: "会员状态"
+      title: "用户状态",
+      key: "user_status",
+      dataIndex: "user_status"
     },{
-      title: "会员级别",
-      // key: "会员级别",
-      dataIndex: "会员级别"
+      title: "录制进程",
+      key: "record_process",
+      dataIndex: "record_process"
     },
     {
       title: "录制模式",
-      // key: "录制模式111",
-      dataIndex: "录制模式"
+      key: "record_mode",
+      dataIndex: "record_mode"
     },
     {
       title: "录制时长（秒）",
-      // key: "录制时长(秒）",
-      dataIndex: "录制时长(秒）"
+      key: "record_duration",
+      dataIndex: "record_duration"
     },
     {
-      title: "文件大小（Byte字节）",
-      // key: "文件大小（Byte字节）",
-      dataIndex: "文件大小（Byte字节）"
+      title: "文件大小（Mb）",
+      key: "file_size",
+      dataIndex: "file_size",
+      render(text: number, record: TableData, index: number) {
+        return (text / 1024 / 1024)
+      }
     },
     {
       title: "分辨率",
-      // key: "分辨率",
-      dataIndex: "分辨率"
+      key: "resolution",
+      dataIndex: "resolution"
     },
+
     {
       title: "视频采样帧",
-      // key: "files",
+      key: "files",
       dataIndex: "files",
       render(text: Array<string>, record: TableData, index: number) {
         return <>
           <Image.PreviewGroup>
             {
-              record?.files?.map((item,idx) => <Image width={50} key={item+"_"+idx} src={"http://10.10.40.24:3001/public/" + item} />)
+              record?.files?.map((item,idx) => <Image width={50} key={item+"_"+idx} src={"http://10.10.40.24:3001" + item} />)
             }
 
           </Image.PreviewGroup>
