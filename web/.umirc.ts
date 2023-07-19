@@ -23,5 +23,9 @@ export default defineConfig({
       'target': 'http://10.10.40.24:3001',
       'changeOrigin': true
     },
+    '/unzip': {
+      'target': 'http://10.10.40.24:3001',
+      'changeOrigin': true
+    }
   }
 });

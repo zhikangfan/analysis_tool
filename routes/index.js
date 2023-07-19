@@ -10,6 +10,14 @@ const uploadMiddleware = require('../middleware/uploadMiddleware');
 const md5 = require('md5');
 
 const linkField = 'frame_sample_url';
+
+
+function parseUrl(filename) {
+  return {
+    ...path.parse(filename),
+    ext: '.' + filename.split('.').pop()
+  }
+}
 /**
  * @description 将两个数组转换成对象
  * @param keys
@@ -37,19 +45,23 @@ function isPhoto(filename) {
 
 async function isExists(path) {
   return new Promise((resolve, reject) => {
-    fs.exists(path, flag => {
-      resolve(flag)
+    fs.access(path,fs.constants.F_OK, err => {
+      if (err) {
+        resolve(false)
+      } else {
+        resolve(true)
+      }
     })
   })
 }
 
 /**
  * 读取zip文件内容
- * @param filename
- * @returns {*[]}
+ * @param file
+ * @returns {Promise<string>}
  */
 async function unzip(file) {
-  let unzipPath = path.resolve(__dirname, '../public/unzip/' + path.parse(file).name)
+  let unzipPath = path.resolve(__dirname, '../public/unzip/' + parseUrl(file).name)
   let downloadPath = path.resolve(__dirname, `../public/download/${file}`)
   let flag = await isExists(unzipPath)
   if (!flag) {
@@ -60,9 +72,8 @@ async function unzip(file) {
 }
 
 function downloadZip(url) {
-  let filename = md5(path.parse(url).name)
-  let ext = path.parse(url).ext
-
+  let filename = md5(parseUrl(url).name)
+  let ext = parseUrl(url).ext
   let downPath = path.resolve(__dirname, `../public/download/${filename}${ext}`);
   return new Promise((resolve, reject) => {
     if (ext === '.zip') {
@@ -88,8 +99,6 @@ function downloadZip(url) {
   })
 
 }
-// downloadZip('http://api.console.aunbox.cn/utils/sdk-log/download?app_id=10204011&path=%2Flocal%2Fmntdir%2Fsdk%2F10204011%2F20230608%2Ffd4a7a664e51550c6beb19828225f1df%2F1686226403722.zip')
-
 
 // 上传
 router.post('/upload', uploadMiddleware, async (req, res) => {
@@ -146,39 +155,12 @@ router.get('/data', async (req,res) => {
         filterData.shift();
         finalData = filterData.map(values => arrayToObject(keys, values))
         // 将zip下载到本地并解压
-        for (let i = 0; i < finalData.length; i++) {
-          let item = finalData[i];
-          if (item[linkField]) {
-            try {
-              let dirname = md5(path.parse(item[linkField]).name);
-              let unzipPath = path.resolve(__dirname, '../public/unzip/' + dirname);
-              let flag = await isExists(unzipPath)
-              let unzipFilePath = unzipPath
-              if (!flag) {
-                let resultsFile = await downloadZip(item[linkField])
-                // 解压文件
-                unzipFilePath = await unzip(resultsFile);
-              }
-
-              // 读取文件目录
-              fs.readdir(unzipFilePath, (err, files) => {
-                if (err) {
-                  console.log(err)
-                } else {
-                  // 将图片内容过滤出来
-                  let photos = files.filter(f => ['.png','.jpeg','.jpg', '.webp', '.svg', '.gif'].includes(path.extname(f)));
-
-                  item['files'] = photos.map(item => {
-                    return `/unzip/${dirname}/${item}`
-                  })
-                }
-              })
-            } catch (e) {
-              console.log(e)
-            }
-
-          }
-        }
+        // for (let i = 0; i < finalData.length; i++) {
+        //   let item = finalData[i];
+        //   if (item[linkField]) {
+        //     item['files'] = await getPicturesByRemoteZip(item[linkField])
+        //   }
+        // }
       }
       catchData.set(queryFilename, finalData)
     }
@@ -196,6 +178,63 @@ router.get('/data', async (req,res) => {
     }))
   }
 
+})
+
+/**
+ * @description 根据远程zip url获取zip并解压提取图片
+ * @param remoteZipUrl
+ * @returns {Promise<Array<string>>>}
+ */
+async function getPicturesByRemoteZip(remoteZipUrl) {
+  let dirname = md5(parseUrl(remoteZipUrl).name);
+  let unzipPath = path.resolve(__dirname, '../public/unzip/' + dirname);
+  let flag = await isExists(unzipPath)
+  let unzipFilePath = unzipPath
+  if (!flag) {
+    let resultsFile = await downloadZip(remoteZipUrl)
+    // 解压文件
+    unzipFilePath = await unzip(resultsFile);
+  }
+
+  return new Promise((resolve, reject) => {
+    // 读取文件目录
+    fs.readdir(unzipFilePath, (err, files) => {
+      if (err) {
+        reject(err)
+      } else {
+        // 将图片内容过滤出来
+        let photos = files.filter(f => ['.png','.jpeg','.jpg', '.webp', '.svg', '.gif'].includes(path.extname(f)));
+        let photoSrcArray  = photos.map(item => {
+          return `/unzip/${dirname}/${item}`
+        })
+        resolve(photoSrcArray)
+
+      }
+    })
+  })
+}
+
+// 根据url获取zip包并解压将图片提取返回图片路径
+router.get('/unzip', async (req, res) => {
+  let {url: remoteZipUrl} = req.query;
+  try {
+
+    let pictures = await getPicturesByRemoteZip(new Buffer(remoteZipUrl, 'base64').toString());
+    res.send(JSON.stringify({
+      status: 'success',
+      msg: '获取成功',
+      data: pictures
+    }))
+
+
+  } catch (e) {
+    res.send(JSON.stringify({
+      status: 'fail',
+      msg: '获取失败',
+      data: [],
+      info: e
+    }))
+  }
 })
 
 // 清除缓存

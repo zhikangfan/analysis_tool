@@ -17,7 +17,7 @@ export interface TableData {
   resolution: string, // 分辨率
   frame_rate : number, // 帧率
   frame_sample_url : string, // 截帧采样图片链接
-  files: Array<string> // 截帧采样图片
+  files?: Array<string> // 截帧采样图片
 }
 
 
@@ -120,7 +120,7 @@ export default function HomePage() {
         return <>
           <Image.PreviewGroup>
             {
-              record?.files?.map((item,idx) => <Image width={50} key={item+"_"+idx} src={"http://10.10.40.24:3001" + item} />)
+              record?.files?.map((item,idx) => <Image width={150} key={item+"_"+idx} src={"http://10.10.40.24:3001" + item} />)
             }
 
           </Image.PreviewGroup>
@@ -128,8 +128,9 @@ export default function HomePage() {
       }
     }
   ]
-  const [data, setData] = useState([])
+  const [data, setData] = useState<Array<TableData>>([])
   const [files, setFiles] = useState([])
+  let defaultPageSize = 20;
 
   useEffect(() => {
     axios.get('/files').then(res => {
@@ -150,9 +151,9 @@ export default function HomePage() {
     setTableLoading(true)
     try {
       let res = await axios.get('/data?name=' + filename)
-
-      setData(res.data.data)
-      setTotal(res.data.data.length)
+      let d = await addPictures(1, defaultPageSize, res.data.data)
+      setData(d)
+      setTotal(d.length)
       setTableLoading(false)
     } catch (e) {
       message.error('加载数据错误!')
@@ -160,10 +161,43 @@ export default function HomePage() {
     }
   }
 
+  /**
+   * @description 请求图片
+   * @param {string} url
+   */
+  async function getPictures(url: string) {
+    return axios.get('/unzip?url=' + url)
+  }
+
+  async function addPictures(page: number, pageSize: number, data: Array<TableData>) {
+    let results = data.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
+
+    for (let i = 0; i < results.length; i++) {
+      let picturesResults = await getPictures(window.btoa(results[i]['frame_sample_url']))
+      if (picturesResults.data.status === 'success') {
+        results[i]['files'] = picturesResults.data.data
+      } else {
+        results[i]['files'] = []
+      }
+
+    }
+    data.splice((page - 1) * pageSize, pageSize, ...results)
+    return data;
+  }
+  /**
+   * @description 页码改变
+   * @param {number} page
+   * @param {number} pageSize
+   */
+  async function onPageChange(page: number, pageSize: number) {
+    await addPictures(page, pageSize, data)
+    await setCurrentPage(page)
+  }
+
   return (
     <div style={{padding: '20px'}}>
 
-      <div style={{display: 'flex',}}>
+      <div style={{display: 'flex'}}>
         <Form>
           <Form.Item
             label={"选择文件"}
@@ -171,9 +205,9 @@ export default function HomePage() {
           >
             <Select
               style={{ width: 180 }}
-              onChange={ (filename) => {
-                handleSearch(filename.split('.xlsx')[0])
-                setCurrentPage(1)
+              onChange={ async (filename) => {
+                await handleSearch(filename.split('.xlsx')[0])
+                await setCurrentPage(1)
               }}
               options={files}
             />
@@ -195,16 +229,17 @@ export default function HomePage() {
             tip: '数据获取中...'
           }
         }
+        bordered
         pagination={{
-          pageSize: 10,
           total: total,
+          defaultPageSize: defaultPageSize,
           current: currentPage,
+          pageSizeOptions: [50, 100, 200, 500],
+          showSizeChanger: true,
           showTotal: (total) => {
             return `共 ${total} 条数据`
           },
-          onChange:(page)=> {
-            setCurrentPage(page)
-          }
+          onChange: onPageChange
         }}
       />
     </div>
