@@ -11,6 +11,8 @@ const md5 = require('md5');
 
 const linkField = 'frame_sample_url';
 
+const isLoadZipSwitch = true; // 是否开启懒加载zip
+
 
 function parseUrl(filename) {
   return {
@@ -43,6 +45,11 @@ function isPhoto(filename) {
   return suffix.includes(result[result.length - 1])
 }
 
+/**
+ * @description 是否包含某个文件
+ * @param {string} path 路径
+ * @returns {Promise<boolean>}
+ */
 async function isExists(path) {
   return new Promise((resolve, reject) => {
     fs.access(path,fs.constants.F_OK, err => {
@@ -71,6 +78,11 @@ async function unzip(file) {
   return unzipPath;
 }
 
+/**
+ * @description 下载zip
+ * @param {string} url - 路径
+ * @returns {Promise<string>}
+ */
 function downloadZip(url) {
   let filename = md5(parseUrl(url).name)
   let ext = parseUrl(url).ext
@@ -154,13 +166,17 @@ router.get('/data', async (req,res) => {
         let filterData = data.filter(item => item.length > 0)
         filterData.shift();
         finalData = filterData.map(values => arrayToObject(keys, values))
-        // 将zip下载到本地并解压
-        // for (let i = 0; i < finalData.length; i++) {
-        //   let item = finalData[i];
-        //   if (item[linkField]) {
-        //     item['files'] = await getPicturesByRemoteZip(item[linkField])
-        //   }
-        // }
+
+        if (!isLoadZipSwitch) {
+          // 将zip下载到本地并解压
+          for (let i = 0; i < finalData.length; i++) {
+            let item = finalData[i];
+            if (item[linkField]) {
+              item['files'] = await getPicturesByRemoteZip(item[linkField])
+            }
+          }
+        }
+
       }
       catchData.set(queryFilename, finalData)
     }

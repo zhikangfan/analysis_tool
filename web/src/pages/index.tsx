@@ -24,6 +24,9 @@ export interface TableData {
 export default function HomePage() {
 
   const key = 'loadingKey'
+  const isLoadZipSwitch = true; // 是否开启懒加载zip，若服务端开启则开启，关闭则关闭
+  let defaultPageSize = 1;
+
   const props: UploadProps = {
     name: 'xlsx',
     multiple: true,
@@ -64,11 +67,12 @@ export default function HomePage() {
   const [total, setTotal] = useState<number>(0)
   const [tableLoading, setTableLoading] = useState<boolean>(false)
 
-  const columns = [{
-    title: "神策ID",
-    key: "distinct_id",
-    dataIndex: "distinct_id"
-  },
+  const columns = [
+    {
+      title: "神策ID",
+      key: "distinct_id",
+      dataIndex: "distinct_id"
+    },
     {
       title: "用户ID",
       key: "uid",
@@ -130,7 +134,7 @@ export default function HomePage() {
   ]
   const [data, setData] = useState<Array<TableData>>([])
   const [files, setFiles] = useState([])
-  let defaultPageSize = 20;
+
 
   useEffect(() => {
     axios.get('/files').then(res => {
@@ -170,6 +174,12 @@ export default function HomePage() {
   }
 
   async function addPictures(page: number, pageSize: number, data: Array<TableData>) {
+
+    // 没有开启懒加载，直接返回
+    if (!isLoadZipSwitch) {
+      return data;
+    }
+
     let results = data.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize);
 
     for (let i = 0; i < results.length; i++) {
