@@ -194,7 +194,7 @@ export default function HomePage() {
     }
     try {
       setTableLoading(true)
-      let filterData = data.filter(item => item.uid === value);
+      let filterData = data.filter(item => item.distinct_id === value);
       let d = await addPictures(1, defaultPageSize, filterData)
       setData(d)
       setTotal(d.length)
@@ -271,7 +271,7 @@ export default function HomePage() {
           </Form.Item>
         </Form>
         <div style={{width: 350, marginLeft: 10}}>
-          <Search placeholder="用户ID" onSearch={onSearch} enterButton />
+          <Search placeholder="神策ID" onSearch={onSearch} enterButton />
         </div>
         {/*<div style={{marginLeft: '30px'}}>*/}
         {/*  <Upload {...props}>*/}
